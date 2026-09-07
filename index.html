@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827"><link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="styles.css"><title>گزارش روزانه ویزیتورهای شام شام</title>
+</head>
+<body>
+<main class="container">
+<header class="brand"><div class="logo">شام شام</div><h1>گزارش روزانه ویزیتورها</h1><p>شعبه خوزستان</p></header>
+<section id="loginView" class="card"><h2>ورود</h2>
+<label>نام کاربری</label><input id="username" autocomplete="username" placeholder="مثلاً visitor1">
+<label>رمز عبور</label><input id="password" type="password" autocomplete="current-password">
+<button id="loginBtn">ورود به برنامه</button><div id="loginMsg" class="msg"></div></section>
+
+<section id="appView" class="hidden">
+<div class="topbar card"><div><strong id="welcome"></strong><small id="roleLabel"></small></div><button id="logoutBtn" class="secondary">خروج</button></div>
+
+<section id="reportView" class="card"><h2>ثبت گزارش امروز</h2><div class="dateBox">تاریخ: <strong id="todayFa"></strong></div>
+<label>مسیر</label><input id="route" placeholder="مثلاً مسیر اهواز ۱">
+<label>فروش روز (ریال)</label><input id="sales" type="number" inputmode="numeric" min="0">
+<label>تعداد فاکتور</label><input id="invoiceCount" type="number" inputmode="numeric" min="0">
+<label>تناژ فروش روز</label><input id="tonnage" type="number" inputmode="decimal" min="0" step="0.01">
+<label>چیدمان/استقرار در مسیر انجام شد؟</label><select id="arrangement"><option value="">انتخاب کنید</option><option>بله</option><option>خیر</option></select>
+<label>تمام مشتریان مسیر بررسی شدند؟</label><select id="routeVisits"><option value="">انتخاب کنید</option><option>بله</option><option>خیر</option></select>
+<label>مشکلات مسیر / موارد نیازمند پیگیری</label><textarea id="problems" rows="4"></textarea>
+<button id="saveBtn">ثبت گزارش</button><div id="saveMsg" class="msg"></div></section>
+
+<section class="card"><h2>گزارش‌های ثبت‌شده من</h2><div id="myReports" class="reports"></div></section>
+<section id="adminView" class="card hidden"><h2>داشبورد مدیر</h2>
+<div class="filters"><input id="filterVisitor" placeholder="فیلتر نام ویزیتور"><input id="filterDate" type="date"></div>
+<button id="refreshBtn" class="secondary">به‌روزرسانی</button><div id="allReports" class="reports"></div></section>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="app.js"></script>
+</body></html>
