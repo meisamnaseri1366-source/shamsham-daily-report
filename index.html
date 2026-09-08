@@ -1,66 +1,8 @@
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#111827">
-  <title>گزارش روزانه ویزیتورهای شام شام</title>
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.getElementById("loginForm");
 
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css">
-</head>
-
-<body>
-
-  <main class="container">
-
-    <div class="card">
-
-      <h1>گزارش روزانه ویزیتورهای شام شام</h1>
-
-      <p class="subtitle">شعبه خوزستان</p>
-
-      <form id="loginForm">
-
-        <label for="username">نام کاربری</label>
-
-        <input
-          id="username"
-          name="username"
-          type="text"
-          placeholder="مثلاً admin"
-          autocomplete="username"
-          required
-        >
-
-        <label for="password">رمز عبور</label>
-
-        <input
-          id="password"
-          name="password"
-          type="password"
-          placeholder="رمز عبور"
-          autocomplete="current-password"
-          required
-        >
-
-        <button id="loginButton" type="submit">
-          ورود به برنامه
-        </button>
-
-      </form>
-
-      <div id="message"></div>
-
-    </div>
-
-  </main>
-
-  <!-- مهم: کتابخانه Supabase باید قبل از app.js لود شود -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- کد اصلی برنامه -->
-  <script src="app.js"></script>
-
-</body>
-</html>
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    alert("✅ دکمه ورود درست کار می‌کند!");
+  });
+});
