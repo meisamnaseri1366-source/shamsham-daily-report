@@ -1,120 +1,54 @@
-const SUPABASE_URL = "https://mgfywvrylkftyyomfbcq.supabase.co";
-const SUPABASE_KEY = "sb_publishable_OvCd2s2g70MsRhtpuI_xWA_bzNwz33V";
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111827">
+  <title>گزارش روزانه ویزیتورهای شام شام</title>
 
-const db = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
 
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("loginForm");
-  const button = document.getElementById("loginButton");
+<body>
 
-  if (!form) {
-    alert("خطا: فرم ورود پیدا نشد.");
-    return;
-  }
+  <main class="container">
+    <div class="card">
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
+      <h1>گزارش روزانه ویزیتورهای شام شام</h1>
+      <p class="subtitle">شعبه خوزستان</p>
 
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value;
+      <form id="loginForm">
 
-    if (!username || !password) {
-      alert("نام کاربری و رمز عبور را وارد کنید.");
-      return;
-    }
+        <label for="username">نام کاربری</label>
+        <input
+          id="username"
+          type="text"
+          placeholder="نام کاربری"
+          autocomplete="username"
+          required
+        >
 
-    button.disabled = true;
-    button.textContent = "در حال ورود...";
+        <label for="password">رمز عبور</label>
+        <input
+          id="password"
+          type="password"
+          placeholder="رمز عبور"
+          autocomplete="current-password"
+          required
+        >
 
-    try {
-      // پیدا کردن ایمیل مربوط به نام کاربری
-      const { data: email, error: emailError } =
-        await db.rpc("resolve_login_email", {
-          p_username: username
-        });
-
-      if (emailError) {
-        console.error(emailError);
-        throw new Error("خطا در ارتباط با سرور.");
-      }
-
-      if (!email) {
-        throw new Error("نام کاربری پیدا نشد.");
-      }
-
-      // ورود به حساب
-      const { data, error } =
-        await db.auth.signInWithPassword({
-          email: email,
-          password: password
-        });
-
-      if (error) {
-        console.error(error);
-        throw new Error("نام کاربری یا رمز عبور اشتباه است.");
-      }
-
-      // پیدا کردن مشخصات کاربر
-      const { data: profile, error: profileError } =
-        await db
-          .from("visitors")
-          .select("*")
-          .eq("user_id", data.user.id)
-          .single();
-
-      if (profileError || !profile) {
-        console.error(profileError);
-        throw new Error("اطلاعات کاربر پیدا نشد.");
-      }
-
-      localStorage.setItem(
-        "shamsham_user",
-        JSON.stringify(profile)
-      );
-
-      // مدیر
-      if (profile.role === "admin") {
-        showAdmin(profile);
-      }
-
-      // ویزیتور
-      else {
-        showVisitor(profile);
-      }
-
-    } catch (error) {
-      console.error(error);
-      alert("❌ " + error.message);
-    }
-
-    button.disabled = false;
-    button.textContent = "ورود به برنامه";
-  });
-});
-
-
-function showAdmin(profile) {
-
-  document.body.innerHTML = `
-    <main class="container">
-
-      <div class="card">
-
-        <h1>داشبورد مدیریت</h1>
-
-        <p>
-          خوش آمدید ${profile.full_name} 👋
-        </p>
-
-        <button id="reportsButton">
-          مشاهده گزارش‌ها
+        <button id="loginButton" type="submit">
+          ورود به برنامه
         </button>
 
-        <button id="logoutButton">
-          خروج
-        </button>
+      </form>
 
-        <div id="reports
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
