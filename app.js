@@ -1,244 +1,458 @@
 const SUPABASE_URL = "https://mgfywvrylkftyyomfbcq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_OvCd2s2g70MsRhtpuI_xWA_bzNwz33V";
 
-const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const $ = (id) => document.getElementById(id);
+const fa = n => Number(n || 0).toLocaleString("fa-IR");
 
-document.addEventListener("DOMContentLoaded", () => {
-  const loginForm = $("loginForm");
+function page(html) {
+  document.body.innerHTML = `
+  <main class="container">
+    <div class="card" style="max-width:900px;margin:20px auto">
+      ${html}
+    </div>
+  </main>`;
+}
 
-  if (!loginForm) {
-    console.error("loginForm پیدا نشد");
-    return;
+function css() {
+  const s = document.createElement("style");
+  s.innerHTML = `
+  body{margin:0;background:#f3f4f6;font-family:Tahoma,Arial;color:#111827}
+  .container{padding:15px}
+  .card{background:white;border-radius:18px;padding:20px;box-shadow:0 5px 25px #0001}
+  h1,h2{margin-top:0}
+  button{border:0;border-radius:12px;padding:13px 18px;font-size:15px;cursor:pointer}
+  .primary{background:#111827;color:white;width:100%}
+  .green{background:#16a34a;color:white}
+  .red{background:#dc2626;color:white}
+  input,select,textarea{
+    width:100%;box-sizing:border-box;padding:12px;margin:6px 0 14px;
+    border:1px solid #d1d5db;border-radius:10px;font-size:15px
   }
+  label{font-weight:bold;font-size:14px}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .stat{background:#f9fafb;border-radius:14px;padding:15px;text-align:center}
+  .stat b{display:block;font-size:20px;margin-top:7px}
+  .report{border:1px solid #e5e7eb;border-radius:15px;padding:15px;margin-top:12px}
+  .row{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #eee;padding:7px 0}
+  .row:last-child{border:0}
+  .rank{padding:10px;background:#f9fafb;border-radius:10px;margin:6px 0}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  @media(max-width:650px){.grid{grid-template-columns:repeat(2,1fr)}}
+  `;
+  document.head.appendChild(s);
+}
+css();
 
-  loginForm.addEventListener("submit", login);
-});
+async function login() {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
 
-async function login(event) {
-  event.preventDefault();
-
-  const username = $("username")?.value.trim();
-  const password = $("password")?.value;
-
-  if (!username || !password) {
-    alert("نام کاربری و رمز عبور را وارد کنید.");
-    return;
-  }
-
-  const button = event.submitter;
-  if (button) {
-    button.disabled = true;
-    button.textContent = "در حال ورود...";
-  }
+  const btn = document.getElementById("loginButton");
+  btn.disabled = true;
+  btn.textContent = "در حال ورود...";
 
   try {
     const { data: email, error: rpcError } =
-      await client.rpc("resolve_login_email", {
-        p_username: username
-      });
+      await db.rpc("resolve_login_email", { p_username: username });
 
-    if (rpcError) {
-      console.error(rpcError);
-      throw new Error("خطا در ارتباط با سرور.");
+    if (rpcError || !email) {
+      alert("نام کاربری پیدا نشد");
+      return;
     }
 
-    if (!email) {
-      throw new Error("نام کاربری پیدا نشد.");
-    }
-
-    const { data, error } =
-      await client.auth.signInWithPassword({
-        email: email,
-        password: password
-      });
+    const { error } = await db.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
 
     if (error) {
-      throw new Error("نام کاربری یا رمز عبور اشتباه است.");
+      alert("نام کاربری یا رمز عبور اشتباه است");
+      return;
     }
 
-    const user = data.user;
+    const { data: profile } = await db
+      .from("visitors")
+      .select("*")
+      .eq("user_id", (await db.auth.getUser()).data.user.id)
+      .single();
 
-    const { data: profile, error: profileError } =
-      await client
-        .from("visitors")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-    if (profileError || !profile) {
-      throw new Error("اطلاعات کاربر پیدا نشد.");
-    }
-
-    localStorage.setItem("shamsham_user", JSON.stringify(profile));
-
-    if (profile.role === "admin") {
-      showManagerPanel(profile);
+    if (profile && profile.role === "admin") {
+      showAdmin();
     } else {
-      showVisitorPanel(profile);
+      showVisitor(profile);
     }
 
-  } catch (error) {
-    console.error(error);
-    alert(error.message || "ورود انجام نشد.");
+  } catch (e) {
+    alert("خطا در اتصال به سامانه");
+    console.error(e);
   } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = "ورود به برنامه";
-    }
+    btn.disabled = false;
+    btn.textContent = "ورود به برنامه";
   }
 }
 
-function showVisitorPanel(profile) {
-  document.body.innerHTML = `
-    <div class="container">
-      <h1>گزارش روزانه ویزیتورهای شام شام</h1>
-      <p>سلام ${profile.full_name} 👋</p>
+document.getElementById("loginForm").addEventListener("submit", e => {
+  e.preventDefault();
+  login();
+});
 
-      <form id="reportForm">
-
-        <label>مسیر</label>
-        <input id="route" required>
-
-        <label>تاریخ</label>
-        <input id="reportDate" type="date" required>
-
-        <label>فروش روز (ریال)</label>
-        <input id="sales" type="number" min="0" required>
-
-        <label>تعداد فاکتور</label>
-        <input id="invoices" type="number" min="0" required>
-
-        <label>تناژ فروش</label>
-        <input id="tonnage" type="number" min="0" step="0.01" required>
-
-        <label>آیا چیدمان مسیر انجام شد؟</label>
-        <select id="arrangement">
-          <option value="بله">بله</option>
-          <option value="خیر">خیر</option>
-        </select>
-
-        <label>آیا تمام مشتریان مسیر ویزیت شدند؟</label>
-        <select id="routeVisits">
-          <option value="بله">بله</option>
-          <option value="خیر">خیر</option>
-        </select>
-
-        <label>مشکلات مسیر / موارد نیازمند پیگیری</label>
-        <textarea id="problems"></textarea>
-
-        <button type="submit">ثبت گزارش</button>
-      </form>
-
-      <button id="logoutBtn">خروج</button>
+function showVisitor(profile) {
+  page(`
+    <div class="topbar">
+      <div>
+        <h2>گزارش روزانه</h2>
+        <div>ویزیتور: <b>${profile?.full_name || ""}</b></div>
+      </div>
+      <button class="red" onclick="logout()">خروج</button>
     </div>
-  `;
 
-  $("reportForm").addEventListener("submit", submitReport);
-  $("logoutBtn").addEventListener("click", logout);
+    <hr>
+
+    <label>مسیر</label>
+    <input id="route" placeholder="مثلاً اهواز">
+
+    <label>تاریخ</label>
+    <input id="report_date" type="date">
+
+    <label>فروش روز (ریال)</label>
+    <input id="sales_rial" type="number" placeholder="مثلاً 120000000">
+
+    <label>تعداد فاکتور</label>
+    <input id="invoice_count" type="number">
+
+    <label>تناژ فروش روز</label>
+    <input id="tonnage" type="number" step="0.01">
+
+    <label>آیا چیدمان در مسیر انجام شد؟</label>
+    <select id="arrangement">
+      <option value="بله">بله</option>
+      <option value="خیر">خیر</option>
+    </select>
+
+    <label>آیا از تمام عامل‌های مسیر سرکشی شد؟</label>
+    <select id="route_visits">
+      <option value="بله">بله</option>
+      <option value="خیر">خیر</option>
+    </select>
+
+    <label>مشکلات مسیر / موارد نیازمند پیگیری</label>
+    <textarea id="problems" rows="4"></textarea>
+
+    <button class="primary" onclick="submitReport()">
+      ارسال گزارش
+    </button>
+  `);
+
+  document.getElementById("report_date").value =
+    new Date().toISOString().split("T")[0];
 }
 
-async function submitReport(event) {
-  event.preventDefault();
+async function submitReport() {
+  const user = (await db.auth.getUser()).data.user;
 
-  const profile = JSON.parse(localStorage.getItem("shamsham_user"));
+  const { data: profile } = await db
+    .from("visitors")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
 
   const report = {
-    user_id: profile.user_id,
-    visitor_id: profile.id,
+    user_id: user.id,
+    visitor_id: user.id,
     visitor_name: profile.full_name,
-    route: $("route").value.trim(),
-    report_date: $("reportDate").value,
-    sales_rial: Number($("sales").value) || 0,
-    invoice_count: Number($("invoices").value) || 0,
-    tonnage: Number($("tonnage").value) || 0,
-    arrangement: $("arrangement").value,
-    route_visits: $("routeVisits").value,
-    problems: $("problems").value.trim()
+    route: document.getElementById("route").value,
+    report_date: document.getElementById("report_date").value,
+    sales_rial: Number(document.getElementById("sales_rial").value || 0),
+    invoice_count: Number(document.getElementById("invoice_count").value || 0),
+    tonnage: Number(document.getElementById("tonnage").value || 0),
+    arrangement: document.getElementById("arrangement").value,
+    route_visits: document.getElementById("route_visits").value,
+    problems: document.getElementById("problems").value
   };
 
-  const { error } = await client
-    .from("daily_reports")
-    .insert(report);
-
-  if (error) {
-    console.error(error);
-    alert("گزارش ثبت نشد: " + error.message);
+  if (!report.route) {
+    alert("لطفاً مسیر را وارد کنید");
     return;
   }
 
-  alert("✅ گزارش با موفقیت ثبت شد.");
-  $("reportForm").reset();
+  const { error } = await db.from("daily_reports").insert(report);
+
+  if (error) {
+    console.error(error);
+    alert("ارسال گزارش انجام نشد");
+    return;
+  }
+
+  alert("✅ گزارش با موفقیت ارسال شد");
+  showVisitor(profile);
 }
 
-async function showManagerPanel(profile) {
-  document.body.innerHTML = `
-    <div class="container">
-      <h1>داشبورد مدیریت شام شام</h1>
-      <p>سلام ${profile.full_name} 👋</p>
-
-      <button id="loadReports">نمایش گزارش‌ها</button>
-      <button id="logoutBtn">خروج</button>
-
-      <div id="reports"></div>
+async function showAdmin() {
+  page(`
+    <div class="topbar">
+      <div>
+        <h2>داشبورد مدیریت شام شام</h2>
+        <div>شعبه خوزستان</div>
+      </div>
+      <button class="red" onclick="logout()">خروج</button>
     </div>
-  `;
 
-  $("loadReports").addEventListener("click", loadReports);
-  $("logoutBtn").addEventListener("click", logout);
+    <hr>
 
-  await loadReports();
+    <div class="grid">
+      <div class="stat">فروش کل<b id="totalSales">0</b></div>
+      <div class="stat">فاکتور<b id="totalInvoices">0</b></div>
+      <div class="stat">تناژ<b id="totalTonnage">0</b></div>
+      <div class="stat">تعداد گزارش<b id="reportCount">0</b></div>
+    </div>
+
+    <br>
+
+    <label>فیلتر ویزیتور</label>
+    <select id="visitorFilter">
+      <option value="">همه ویزیتورها</option>
+    </select>
+
+    <label>از تاریخ</label>
+    <input id="fromDate" type="date">
+
+    <label>تا تاریخ</label>
+    <input id="toDate" type="date">
+
+    <label>مسیر</label>
+    <input id="routeFilter" placeholder="مثلاً اهواز">
+
+    <button class="primary" onclick="loadAdminReports()">
+      🔎 نمایش گزارش‌ها
+    </button>
+
+    <br><br>
+
+    <button class="green" onclick="exportCSV()">
+      📊 خروجی Excel / CSV
+    </button>
+
+    <h3>🏆 رتبه‌بندی ویزیتورها</h3>
+    <div id="ranking"></div>
+
+    <h3>📋 گزارش‌ها</h3>
+    <div id="reports"></div>
+  `);
+
+  await loadAdminReports();
 }
 
-async function loadReports() {
-  const box = $("reports");
-
-  box.innerHTML = "در حال دریافت گزارش‌ها...";
-
-  const { data, error } = await client
+async function loadAdminReports() {
+  const { data, error } = await db
     .from("daily_reports")
     .select("*")
-    .order("report_date", { ascending: false })
-    .order("created_at", { ascending: false });
+    .order("report_date", { ascending: false });
 
   if (error) {
     console.error(error);
-    box.innerHTML = "خطا در دریافت گزارش‌ها: " + error.message;
+    alert("دریافت گزارش‌ها با خطا مواجه شد");
     return;
   }
 
-  if (!data || data.length === 0) {
-    box.innerHTML = "<p>هنوز گزارشی ثبت نشده است.</p>";
+  window.allReports = data || [];
+
+  const names = [...new Set(
+    window.allReports.map(x => x.visitor_name).filter(Boolean)
+  )];
+
+  const select = document.getElementById("visitorFilter");
+
+  if (select) {
+    select.innerHTML =
+      `<option value="">همه ویزیتورها</option>` +
+      names.map(n => `<option value="${n}">${n}</option>`).join("");
+  }
+
+  renderAdmin();
+}
+
+function getFilteredReports() {
+  let reports = [...(window.allReports || [])];
+
+  const visitor = document.getElementById("visitorFilter")?.value;
+  const from = document.getElementById("fromDate")?.value;
+  const to = document.getElementById("toDate")?.value;
+  const route = document.getElementById("routeFilter")?.value.trim();
+
+  if (visitor)
+    reports = reports.filter(x => x.visitor_name === visitor);
+
+  if (from)
+    reports = reports.filter(x => x.report_date >= from);
+
+  if (to)
+    reports = reports.filter(x => x.report_date <= to);
+
+  if (route)
+    reports = reports.filter(x =>
+      (x.route || "").includes(route)
+    );
+
+  return reports;
+}
+
+function renderAdmin() {
+  const reports = getFilteredReports();
+
+  const sales = reports.reduce(
+    (a, x) => a + Number(x.sales_rial || 0), 0
+  );
+
+  const invoices = reports.reduce(
+    (a, x) => a + Number(x.invoice_count || 0), 0
+  );
+
+  const tonnage = reports.reduce(
+    (a, x) => a + Number(x.tonnage || 0), 0
+  );
+
+  const visitors = new Set(
+    reports.map(x => x.visitor_name).filter(Boolean)
+  ).size;
+
+  document.getElementById("totalSales").textContent = fa(sales) + " ریال";
+  document.getElementById("totalInvoices").textContent = fa(invoices);
+  document.getElementById("totalTonnage").textContent = fa(tonnage);
+  document.getElementById("reportCount").textContent =
+    fa(reports.length) + " / " + fa(visitors) + " نفر";
+
+  renderRanking(reports);
+  renderReports(reports);
+}
+
+function renderRanking(reports) {
+  const map = {};
+
+  reports.forEach(r => {
+    const name = r.visitor_name || "نامشخص";
+
+    if (!map[name])
+      map[name] = { sales: 0, invoices: 0, tonnage: 0 };
+
+    map[name].sales += Number(r.sales_rial || 0);
+    map[name].invoices += Number(r.invoice_count || 0);
+    map[name].tonnage += Number(r.tonnage || 0);
+  });
+
+  const list = Object.entries(map)
+    .sort((a,b) => b[1].sales - a[1].sales);
+
+  document.getElementById("ranking").innerHTML =
+    list.length
+      ? list.map((x,i) => `
+        <div class="rank">
+          <b>${i+1}. ${x[0]}</b>
+          <br>
+          فروش: ${fa(x[1].sales)} ریال
+          | فاکتور: ${fa(x[1].invoices)}
+          | تناژ: ${fa(x[1].tonnage)}
+        </div>
+      `).join("")
+      : "هنوز گزارشی ثبت نشده است.";
+}
+
+function renderReports(reports) {
+  const box = document.getElementById("reports");
+
+  if (!reports.length) {
+    box.innerHTML = "<p>گزارشی پیدا نشد.</p>";
     return;
   }
 
-  box.innerHTML = data.map(report => `
-    <div style="border:1px solid #ddd;padding:12px;margin:10px 0;border-radius:10px">
-      <strong>${escapeHtml(report.visitor_name || "")}</strong>
-      <br>مسیر: ${escapeHtml(report.route || "")}
-      <br>تاریخ: ${escapeHtml(report.report_date || "")}
-      <br>فروش: ${Number(report.sales_rial || 0).toLocaleString("fa-IR")} ریال
-      <br>فاکتور: ${report.invoice_count || 0}
-      <br>تناژ: ${report.tonnage || 0}
-      <br>چیدمان: ${escapeHtml(report.arrangement || "")}
-      <br>ویزیت کامل: ${escapeHtml(report.route_visits || "")}
-      <br>مشکلات: ${escapeHtml(report.problems || "-")}
+  box.innerHTML = reports.map(r => `
+    <div class="report">
+      <h3>${r.visitor_name || "بدون نام"}</h3>
+
+      <div class="row">
+        <span>تاریخ</span>
+        <b>${r.report_date || "-"}</b>
+      </div>
+
+      <div class="row">
+        <span>مسیر</span>
+        <b>${r.route || "-"}</b>
+      </div>
+
+      <div class="row">
+        <span>فروش</span>
+        <b>${fa(r.sales_rial)} ریال</b>
+      </div>
+
+      <div class="row">
+        <span>فاکتور</span>
+        <b>${fa(r.invoice_count)}</b>
+      </div>
+
+      <div class="row">
+        <span>تناژ</span>
+        <b>${fa(r.tonnage)}</b>
+      </div>
+
+      <div class="row">
+        <span>چیدمان</span>
+        <b>${r.arrangement || "-"}</b>
+      </div>
+
+      <div class="row">
+        <span>سرکشی</span>
+        <b>${r.route_visits || "-"}</b>
+      </div>
+
+      <div class="row">
+        <span>مشکلات</span>
+        <b>${r.problems || "موردی ثبت نشده"}</b>
+      </div>
     </div>
   `).join("");
 }
 
-function escapeHtml(text) {
-  return String(text)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function exportCSV() {
+  const reports = getFilteredReports();
+
+  if (!reports.length) {
+    alert("گزارشی برای خروجی وجود ندارد");
+    return;
+  }
+
+  const header =
+    "ویزیتور,مسیر,تاریخ,فروش ریال,تعداد فاکتور,تناژ,چیدمان,سرکشی,مشکلات\n";
+
+  const rows = reports.map(r =>
+    [
+      r.visitor_name,
+      r.route,
+      r.report_date,
+      r.sales_rial,
+      r.invoice_count,
+      r.tonnage,
+      r.arrangement,
+      r.route_visits,
+      r.problems
+    ].map(v => `"${String(v || "").replace(/"/g,'""')}"`).join(",")
+  ).join("\n");
+
+  const blob = new Blob(
+    ["\ufeff" + header + rows],
+    {type:"text/csv;charset=utf-8;"}
+  );
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+
+  a.href = url;
+  a.download = "گزارش_ویزیتورها.csv";
+  a.click();
+
+  URL.revokeObjectURL(url);
 }
 
 async function logout() {
-  await client.auth.signOut();
-  localStorage.removeItem("shamsham_user");
+  await db.auth.signOut();
   location.reload();
 }
