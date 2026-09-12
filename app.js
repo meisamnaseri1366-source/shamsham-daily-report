@@ -371,11 +371,9 @@ function showVisitor(profile){
 
   document.getElementById("report_date").value =
     new Date().toISOString().split("T")[0];
-}
 function formatSales(input){
 
-  let value = input.value
-    .replace(/[^\d]/g, "");
+  let value = input.value.replace(/[^\d]/g, "");
 
   if(!value){
     input.value = "";
@@ -385,8 +383,6 @@ function formatSales(input){
   input.value =
     Number(value).toLocaleString("fa-IR") + " ریال";
 }
-
-
 async function submitReport(){
 
   const user =
@@ -412,15 +408,14 @@ async function submitReport(){
 
     report_date:
       document.getElementById("report_date").value,
-
-    sales_rial:
+sales_rial:
   Number(
     document
       .getElementById("sales_rial")
       .value
       .replace(/[^\d]/g, "") || 0
   ),
-
+  
     invoice_count:
       Number(
         document.getElementById("invoice_count").value || 0
