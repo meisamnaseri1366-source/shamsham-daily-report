@@ -320,11 +320,13 @@ function showVisitor(profile){
     <input id="report_date" type="date">
 
     <label>فروش روز (ریال)</label>
-    <input
-      id="sales_rial"
-      type="number"
-      placeholder="مثلاً 120000000"
-    >
+<input
+  id="sales_rial"
+  type="text"
+  inputmode="numeric"
+  placeholder="مثلاً ۱۲۰٬۰۰۰٬۰۰۰ ریال"
+  oninput="formatSales(this)"
+>
 
     <label>تعداد فاکتور</label>
     <input id="invoice_count" type="number">
@@ -370,6 +372,19 @@ function showVisitor(profile){
   document.getElementById("report_date").value =
     new Date().toISOString().split("T")[0];
 }
+function formatSales(input){
+
+  let value = input.value
+    .replace(/[^\d]/g, "");
+
+  if(!value){
+    input.value = "";
+    return;
+  }
+
+  input.value =
+    Number(value).toLocaleString("fa-IR") + " ریال";
+}
 
 
 async function submitReport(){
@@ -399,9 +414,12 @@ async function submitReport(){
       document.getElementById("report_date").value,
 
     sales_rial:
-      Number(
-        document.getElementById("sales_rial").value || 0
-      ),
+  Number(
+    document
+      .getElementById("sales_rial")
+      .value
+      .replace(/[^\d]/g, "") || 0
+  ),
 
     invoice_count:
       Number(
