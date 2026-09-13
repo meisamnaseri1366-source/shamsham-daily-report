@@ -1,14 +1,182 @@
 const SUPABASE_URL = "https://mgfywvrylkftyyomfbcq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_OvCd2s2g70MsRhtpuI_xWA_bzNwz33V";
 
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
-const fa = n => Number(n || 0).toLocaleString("fa-IR");
+
+// ======================================================
+// ابزارهای عمومی
+// ======================================================
+
+const faNumber = new Intl.NumberFormat("fa-IR", {
+  useGrouping: true,
+  maximumFractionDigits: 2
+});
+
+const faInteger = new Intl.NumberFormat("fa-IR", {
+  useGrouping: true,
+  maximumFractionDigits: 0
+});
+
+function fa(n) {
+  if (n === null || n === undefined || n === "") {
+    return "۰";
+  }
+
+  try {
+    return faNumber.format(Number(n));
+  } catch {
+    return String(n);
+  }
+}
+
+function faMoney(n) {
+  if (n === null || n === undefined || n === "") {
+    return "۰";
+  }
+
+  try {
+    return faInteger.format(BigInt(String(n)));
+  } catch {
+    return faInteger.format(Number(n) || 0);
+  }
+}
+
+
+// ======================================================
+// تبدیل اعداد فارسی و انگلیسی
+// ======================================================
+
+function normalizeDigits(value) {
+
+  return String(value || "")
+    .replace(/[۰-۹]/g, function (d) {
+      return String("۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+    })
+    .replace(/[٠-٩]/g, function (d) {
+      return String("٠١٢٣٤٥٦٧٨٩".indexOf(d));
+    });
+}
+
+
+function onlyDigits(value) {
+
+  return normalizeDigits(value).replace(/[^\d]/g, "");
+
+}
+
+
+// ======================================================
+// فرمت مبلغ فروش
+// ======================================================
+
+const salesFormatter = new Intl.NumberFormat("fa-IR", {
+  useGrouping: true,
+  maximumFractionDigits: 0
+});
+
+
+function formatSales(input) {
+
+  if (!input) return;
+
+  const oldValue = input.value;
+
+  const oldCursor =
+    input.selectionStart !== null
+      ? input.selectionStart
+      : oldValue.length;
+
+
+  // تعداد رقم‌هایی که قبل از محل کرسر بوده
+  const digitsBefore =
+    (oldValue.slice(0, oldCursor).match(/[0-9۰-۹]/g) || []).length;
+
+
+  // فقط رقم
+  const raw = onlyDigits(oldValue);
+
+
+  if (!raw) {
+
+    input.value = "";
+
+    return;
+  }
+
+
+  let formatted;
+
+
+  try {
+
+    // BigInt باعث می‌شود مبلغ‌های خیلی بزرگ هم دقیق بمانند
+    formatted = salesFormatter.format(BigInt(raw));
+
+  } catch {
+
+    formatted = salesFormatter.format(Number(raw) || 0);
+
+  }
+
+
+  input.value = formatted;
+
+
+  // برگرداندن کرسر به جای درست
+  let seenDigits = 0;
+  let newCursor = formatted.length;
+
+
+  for (let i = 0; i < formatted.length; i++) {
+
+    if (/[0-9۰-۹]/.test(formatted[i])) {
+
+      seenDigits++;
+
+    }
+
+    if (seenDigits >= digitsBefore) {
+
+      newCursor = i + 1;
+
+      break;
+    }
+  }
+
+
+  requestAnimationFrame(function () {
+
+    try {
+
+      input.setSelectionRange(
+        newCursor,
+        newCursor
+      );
+
+    } catch (e) {}
+
+  });
+}
+
+
+// ======================================================
+// تاریخ شمسی
+// ======================================================
 
 function jalaliDate(dateString, full = false) {
-  if (!dateString) return "-";
 
-  const d = new Date(dateString + "T12:00:00");
+  if (!dateString) {
+    return "-";
+  }
+
+
+  const d =
+    new Date(dateString + "T12:00:00");
+
 
   const options = full
     ? {
@@ -25,453 +193,761 @@ function jalaliDate(dateString, full = false) {
         day: "2-digit"
       };
 
-  return new Intl.DateTimeFormat("fa-IR", options).format(d);
+
+  return new Intl.DateTimeFormat(
+    "fa-IR",
+    options
+  ).format(d);
 }
+
+
+// ======================================================
+// صفحه
+// ======================================================
 
 function page(html) {
+
   document.body.innerHTML = `
+
     <main class="container">
+
       <div class="card">
+
         ${html}
+
       </div>
+
     </main>
+
   `;
 }
+
+
+// ======================================================
+// ظاهر برنامه
+// ======================================================
 
 function addCSS() {
-  const s = document.createElement("style");
+
+  const s =
+    document.createElement("style");
+
 
   s.innerHTML = `
-    body{
-      margin:0;
-      background:#f3f4f6;
-      font-family:Tahoma,Arial,sans-serif;
-      color:#111827;
+
+    body {
+
+      margin: 0;
+
+      background: #f3f4f6;
+
+      font-family:
+        Tahoma,
+        Arial,
+        sans-serif;
+
+      color: #111827;
+
     }
 
-    .container{
-      padding:15px;
+
+    .container {
+
+      padding: 15px;
+
     }
 
-    .card{
-      max-width:950px;
-      margin:20px auto;
-      background:#fff;
-      border-radius:20px;
-      padding:20px;
-      box-shadow:0 5px 25px #0001;
+
+    .card {
+
+      max-width: 950px;
+
+      margin: 20px auto;
+
+      background: white;
+
+      border-radius: 20px;
+
+      padding: 20px;
+
+      box-shadow:
+        0 5px 25px #0001;
+
     }
 
-    h1,h2,h3{
-      margin-top:0;
+
+    h1,
+    h2,
+    h3 {
+
+      margin-top: 0;
+
     }
 
-    button{
-      border:0;
-      border-radius:12px;
-      padding:13px 18px;
-      font-size:15px;
-      cursor:pointer;
+
+    button {
+
+      border: 0;
+
+      border-radius: 12px;
+
+      padding: 13px 18px;
+
+      font-size: 15px;
+
+      cursor: pointer;
+
     }
 
-    .primary{
-      background:#111827;
-      color:white;
-      width:100%;
+
+    button:disabled {
+
+      opacity: .6;
+
+      cursor: not-allowed;
+
     }
 
-    .green{
-      background:#16a34a;
-      color:white;
+
+    .primary {
+
+      background: #111827;
+
+      color: white;
+
+      width: 100%;
+
     }
 
-    .red{
-      background:#dc2626;
-      color:white;
+
+    .green {
+
+      background: #16a34a;
+
+      color: white;
+
     }
 
-    input,select,textarea{
-      width:100%;
-      box-sizing:border-box;
-      padding:12px;
-      margin:6px 0 14px;
-      border:1px solid #d1d5db;
-      border-radius:10px;
-      font-size:15px;
-      background:white;
+
+    .red {
+
+      background: #dc2626;
+
+      color: white;
+
     }
 
-    label{
-      font-weight:bold;
-      font-size:14px;
+
+    .blue {
+
+      background: #2563eb;
+
+      color: white;
+
     }
 
-    .grid{
-      display:grid;
-      grid-template-columns:repeat(4,1fr);
-      gap:10px;
+
+    .gray {
+
+      background: #e5e7eb;
+
+      color: #111827;
+
     }
 
-    .stat{
-      background:#f9fafb;
-      border-radius:14px;
-      padding:15px;
-      text-align:center;
+
+    input,
+    select,
+    textarea {
+
+      width: 100%;
+
+      box-sizing: border-box;
+
+      padding: 12px;
+
+      margin: 6px 0 14px;
+
+      border:
+        1px solid #d1d5db;
+
+      border-radius: 10px;
+
+      font-size: 15px;
+
+      background: white;
+
     }
 
-    .stat b{
-      display:block;
-      font-size:19px;
-      margin-top:7px;
+
+    textarea {
+
+      min-height: 90px;
+
+      resize: vertical;
+
     }
 
-    .topbar{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
+
+    label {
+
+      font-weight: bold;
+
+      font-size: 14px;
+
     }
 
-    .day-box{
-      margin-top:15px;
-      border:1px solid #e5e7eb;
-      border-radius:16px;
-      overflow:hidden;
-      background:#fff;
+
+    .grid {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(4, 1fr);
+
+      gap: 10px;
+
     }
 
-    .day-title{
-      padding:16px;
-      background:#f8fafc;
-      cursor:pointer;
-      font-size:16px;
-      font-weight:bold;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
+
+    .stat {
+
+      background: #f9fafb;
+
+      border-radius: 14px;
+
+      padding: 15px;
+
+      text-align: center;
+
     }
 
-    .day-title:hover{
-      background:#f1f5f9;
+
+    .stat b {
+
+      display: block;
+
+      font-size: 19px;
+
+      margin-top: 7px;
+
     }
 
-    .day-content{
-      padding:10px 12px 14px;
+
+    .topbar {
+
+      display: flex;
+
+      justify-content:
+        space-between;
+
+      align-items: center;
+
+      gap: 10px;
+
+      flex-wrap: wrap;
+
     }
 
-    .day-summary{
-      font-size:13px;
-      color:#6b7280;
-      margin-top:5px;
+
+    .topbar-buttons {
+
+      display: flex;
+
+      gap: 8px;
+
+      flex-wrap: wrap;
+
     }
 
-    .report{
-      border:1px solid #e5e7eb;
-      border-radius:14px;
-      padding:14px;
-      margin-top:10px;
-      background:#fff;
+
+    .money-wrap {
+
+      position: relative;
+
     }
 
-    .report h3{
-      margin-bottom:10px;
+
+    .money-wrap input {
+
+      padding-left: 65px;
+
+      direction: ltr;
+
+      text-align: right;
+
     }
 
-    .row{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      border-bottom:1px solid #eee;
-      padding:7px 0;
+
+    .money-unit {
+
+      position: absolute;
+
+      left: 12px;
+
+      top: 50%;
+
+      transform:
+        translateY(-50%);
+
+      color: #6b7280;
+
+      font-weight: bold;
+
+      pointer-events: none;
+
+      font-size: 13px;
+
     }
 
-    .row:last-child{
-      border:0;
+
+    .day-box {
+
+      margin-top: 15px;
+
+      border:
+        1px solid #e5e7eb;
+
+      border-radius: 16px;
+
+      overflow: hidden;
+
+      background: white;
+
     }
 
-    .rank{
-      padding:12px;
-      background:#f9fafb;
-      border-radius:10px;
-      margin:6px 0;
+
+    .day-title {
+
+      padding: 16px;
+
+      background: #f8fafc;
+
+      cursor: pointer;
+
+      font-size: 16px;
+
+      font-weight: bold;
+
+      display: flex;
+
+      justify-content:
+        space-between;
+
+      align-items: center;
+
     }
 
-    .arrow{
-      font-size:18px;
+
+    .day-title:hover {
+
+      background: #f1f5f9;
+
     }
 
-    @media(max-width:650px){
-      .grid{
-        grid-template-columns:repeat(2,1fr);
+
+    .day-content {
+
+      padding:
+        10px
+        12px
+        14px;
+
+    }
+
+
+    .day-summary {
+
+      font-size: 13px;
+
+      color: #6b7280;
+
+      margin-top: 5px;
+
+    }
+
+
+    .report {
+
+      border:
+        1px solid #e5e7eb;
+
+      border-radius: 14px;
+
+      padding: 14px;
+
+      margin-top: 10px;
+
+      background: white;
+
+    }
+
+
+    .report h3 {
+
+      margin-bottom: 10px;
+
+    }
+
+
+    .row {
+
+      display: flex;
+
+      justify-content:
+        space-between;
+
+      gap: 10px;
+
+      border-bottom:
+        1px solid #eee;
+
+      padding: 7px 0;
+
+    }
+
+
+    .row:last-child {
+
+      border: 0;
+
+    }
+
+
+    .rank {
+
+      padding: 12px;
+
+      background: #f9fafb;
+
+      border-radius: 10px;
+
+      margin: 6px 0;
+
+    }
+
+
+    .arrow {
+
+      font-size: 18px;
+
+    }
+
+
+    .filters {
+
+      background: #f8fafc;
+
+      padding: 15px;
+
+      border-radius: 14px;
+
+      margin-top: 15px;
+
+    }
+
+
+    .filter-grid {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(4, 1fr);
+
+      gap: 10px;
+
+    }
+
+
+    .empty {
+
+      text-align: center;
+
+      padding: 30px 10px;
+
+      color: #6b7280;
+
+    }
+
+
+    .success-box {
+
+      background: #dcfce7;
+
+      color: #166534;
+
+      padding: 14px;
+
+      border-radius: 12px;
+
+      margin: 15px 0;
+
+      text-align: center;
+
+      font-weight: bold;
+
+    }
+
+
+    .danger-box {
+
+      background: #fee2e2;
+
+      color: #991b1b;
+
+      padding: 14px;
+
+      border-radius: 12px;
+
+      margin: 15px 0;
+
+      text-align: center;
+
+    }
+
+
+    @media(max-width:650px) {
+
+      .grid {
+
+        grid-template-columns:
+          repeat(2, 1fr);
+
       }
 
-      .card{
-        padding:15px;
+
+      .filter-grid {
+
+        grid-template-columns:
+          repeat(2, 1fr);
+
       }
+
+
+      .card {
+
+        padding: 15px;
+
+      }
+
     }
+
+
+    @media(max-width:450px) {
+
+      .filter-grid {
+
+        grid-template-columns: 1fr;
+
+      }
+
+
+      .grid {
+
+        grid-template-columns:
+          repeat(2, 1fr);
+
+      }
+
+    }
+
   `;
 
+
   document.head.appendChild(s);
+
 }
+
 
 addCSS();
 
-async function login(){
+
+// ======================================================
+// ورود
+// ======================================================
+
+async function login() {
 
   const username =
-    document.getElementById("username").value.trim();
+    document
+      .getElementById("username")
+      .value
+      .trim();
+
 
   const password =
-    document.getElementById("password").value;
+    document
+      .getElementById("password")
+      .value;
+
 
   const btn =
-    document.getElementById("loginButton");
+    document.getElementById(
+      "loginButton"
+    );
+
 
   btn.disabled = true;
-  btn.textContent = "در حال ورود...";
 
-  try{
+  btn.textContent =
+    "در حال ورود...";
 
-    const {data:email,error:rpcError} =
-      await db.rpc(
-        "resolve_login_email",
-        {p_username:username}
+
+  try {
+
+    const {
+      data: email,
+      error: rpcError
+    } = await db.rpc(
+      "resolve_login_email",
+      {
+        p_username: username
+      }
+    );
+
+
+    if (rpcError || !email) {
+
+      alert(
+        "نام کاربری پیدا نشد"
       );
 
-    if(rpcError || !email){
-      alert("نام کاربری پیدا نشد");
       return;
     }
 
-    const {error} =
+
+    const {
+      error
+    } =
       await db.auth.signInWithPassword({
-        email:email,
-        password:password
+
+        email: email,
+
+        password: password
+
       });
 
-    if(error){
-      alert("نام کاربری یا رمز عبور اشتباه است");
+
+    if (error) {
+
+      alert(
+        "نام کاربری یا رمز عبور اشتباه است"
+      );
+
       return;
     }
 
-    const user =
-      (await db.auth.getUser()).data.user;
 
-    const {data:profile} =
+    const {
+      data: userData
+    } =
+      await db.auth.getUser();
+
+
+    const user =
+      userData.user;
+
+
+    const {
+      data: profile
+    } =
       await db
         .from("visitors")
         .select("*")
-        .eq("user_id",user.id)
+        .eq(
+          "user_id",
+          user.id
+        )
         .single();
 
-    if(profile && profile.role === "admin"){
+
+    if (
+      profile &&
+      profile.role === "admin"
+    ) {
+
       showAdmin();
-    }else{
+
+    } else {
+
       showVisitor(profile);
+
     }
 
-  }catch(e){
+  } catch (e) {
 
     console.error(e);
-    alert("خطا در اتصال به سامانه");
 
-  }finally{
+    alert(
+      "خطا در اتصال به سامانه"
+    );
+
+  } finally {
 
     btn.disabled = false;
-    btn.textContent = "ورود به برنامه";
+
+    btn.textContent =
+      "ورود به برنامه";
 
   }
+
 }
 
-document
-  .getElementById("loginForm")
-  .addEventListener("submit",e=>{
-    e.preventDefault();
-    login();
-  });
+
+// ======================================================
+// فرم ورود
+// ======================================================
+
+const loginForm =
+  document.getElementById(
+    "loginForm"
+  );
 
 
-function showVisitor(profile){
+if (loginForm) {
+
+  loginForm.addEventListener(
+    "submit",
+    function (e) {
+
+      e.preventDefault();
+
+      login();
+
+    }
+  );
+
+}
+
+
+// ======================================================
+// صفحه ویزیتور
+// ======================================================
+
+function showVisitor(profile) {
 
   page(`
+
     <div class="topbar">
 
       <div>
-        <h2>گزارش روزانه</h2>
+
+        <h2>
+          گزارش روزانه
+        </h2>
+
         <div>
+
           ویزیتور:
-          <b>${profile?.full_name || ""}</b>
+
+          <b>
+            ${profile?.full_name || ""}
+          </b>
+
         </div>
+
       </div>
 
-      <button class="red" onclick="logout()">
-        خروج
-      </button>
-
-    </div>
-
-    <hr>
-
-    <label>مسیر</label>
-    <input id="route" placeholder="مثلاً اهواز">
-
-    <label>تاریخ گزارش</label>
-    <input id="report_date" type="date">
-
-    <label>فروش روز (ریال)</label>
-<input
-  id="sales_rial"
-  type="text"
-  inputmode="numeric"
-  placeholder="مثلاً ۱۲۰٬۰۰۰٬۰۰۰ ریال"
-  oninput="formatSales(this)"
->
-
-    <label>تعداد فاکتور</label>
-    <input id="invoice_count" type="number">
-
-    <label>تناژ فروش روز</label>
-    <input id="tonnage" type="number" step="0.01">
-
-    <label>
-      آیا چیدمان در مسیر انجام شد؟
-    </label>
-
-    <select id="arrangement">
-      <option value="بله">بله</option>
-      <option value="خیر">خیر</option>
-    </select>
-
-    <label>
-      آیا از تمام عامل‌های مسیر سرکشی شد؟
-    </label>
-
-    <select id="route_visits">
-      <option value="بله">بله</option>
-      <option value="خیر">خیر</option>
-    </select>
-
-    <label>
-      مشکلات مسیر / موارد نیازمند پیگیری
-    </label>
-
-    <textarea
-      id="problems"
-      rows="4"
-    ></textarea>
-
-    <button
-      class="primary"
-      onclick="submitReport()"
-    >
-      ارسال گزارش
-    </button>
-  `);
-
-  document.getElementById("report_date").value =
-    new Date().toISOString().split("T")[0];
-function formatSales(input){
-
-  let value = input.value.replace(/[^\d]/g, "");
-
-  if(!value){
-    input.value = "";
-    return;
-  }
-
-  input.value =
-    Number(value).toLocaleString("fa-IR") + " ریال";
-}
-async function submitReport(){
-
-  const user =
-    (await db.auth.getUser()).data.user;
-
-  const {data:profile} =
-    await db
-      .from("visitors")
-      .select("*")
-      .eq("user_id",user.id)
-      .single();
-
-  const report = {
-
-    user_id:user.id,
-
-    visitor_id:user.id,
-
-    visitor_name:profile.full_name,
-
-    route:
-      document.getElementById("route").value,
-
-    report_date:
-      document.getElementById("report_date").value,
-sales_rial:
-  Number(
-    document
-      .getElementById("sales_rial")
-      .value
-      .replace(/[^\d]/g, "") || 0
-  ),
-  
-    invoice_count:
-      Number(
-        document.getElementById("invoice_count").value || 0
-      ),
-
-    tonnage:
-      Number(
-        document.getElementById("tonnage").value || 0
-      ),
-
-    arrangement:
-      document.getElementById("arrangement").value,
-
-    route_visits:
-      document.getElementById("route_visits").value,
-
-    problems:
-      document.getElementById("problems").value
-  };
-
-  if(!report.route){
-
-    alert("لطفاً مسیر را وارد کنید");
-    return;
-
-  }
-
-  const {error} =
-    await db
-      .from("daily_reports")
-      .insert(report);
-
-  if(error){
-
-    console.error(error);
-    alert("ارسال گزارش انجام نشد");
-    return;
-
-  }
-
-  alert("✅ گزارش با موفقیت ارسال شد");
-
-  showVisitor(profile);
-}
-
-
-async function showAdmin(){
-
-  page(`
-
-    <div class="topbar">
-
-      <div>
-        <h2>داشبورد مدیریت شام شام</h2>
-        <div>شعبه خوزستان</div>
-      </div>
 
       <button
         class="red"
@@ -482,611 +958,478 @@ async function showAdmin(){
 
     </div>
 
+
     <hr>
 
-    <div class="grid">
 
-      <div class="stat">
-        فروش کل
-        <b id="totalSales">0</b>
+    <label>
+      مسیر
+    </label>
+
+    <input
+      id="route"
+      placeholder="مثلاً اهواز"
+    >
+
+
+    <label>
+      تاریخ گزارش
+    </label>
+
+    <input
+      id="report_date"
+      type="date"
+    >
+
+
+    <label>
+      فروش روز (ریال)
+    </label>
+
+    <div class="money-wrap">
+
+      <input
+        id="sales_rial"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        placeholder="مثلاً ۷۵۶۰۰۰۰۰"
+        oninput="formatSales(this)"
+      >
+
+      <span class="money-unit">
+        ریال
+      </span>
+
+    </div>
+
+
+    <label>
+      تعداد فاکتور
+    </label>
+
+    <input
+      id="invoice_count"
+      type="number"
+      min="0"
+      inputmode="numeric"
+      placeholder="مثلاً ۱۲"
+    >
+
+
+    <label>
+      تناژ فروش روز
+    </label>
+
+    <input
+      id="tonnage"
+      type="number"
+      min="0"
+      step="0.01"
+      inputmode="decimal"
+      placeholder="مثلاً ۱۰۴"
+    >
+
+
+    <label>
+      آیا چیدمان در مسیر انجام می‌شود؟
+    </label>
+
+    <select id="arrangement">
+
+      <option value="">
+        انتخاب کنید
+      </option>
+
+      <option value="بله">
+        بله
+      </option>
+
+      <option value="خیر">
+        خیر
+      </option>
+
+    </select>
+
+
+    <label>
+      سرکشی به تمام عامل‌های مسیر صورت می‌گیرد؟
+    </label>
+
+    <select id="route_visits">
+
+      <option value="">
+        انتخاب کنید
+      </option>
+
+      <option value="بله">
+        بله
+      </option>
+
+      <option value="خیر">
+        خیر
+      </option>
+
+    </select>
+
+
+    <label>
+      مشکلات مسیر / موارد نیازمند پیگیری
+    </label>
+
+    <textarea
+      id="problems"
+      placeholder="در صورت وجود مشکل اینجا بنویسید..."
+    ></textarea>
+
+
+    <button
+      class="primary"
+      id="submitReportButton"
+      onclick="submitReport()"
+    >
+      ارسال گزارش
+    </button>
+
+  `);
+
+
+  // تاریخ امروز
+  const today =
+    new Date()
+      .toISOString()
+      .split("T")[0];
+
+
+  document
+    .getElementById(
+      "report_date"
+    )
+    .value = today;
+
+}
+
+
+// ======================================================
+// ارسال گزارش
+// ======================================================
+
+async function submitReport() {
+
+  const button =
+    document.getElementById(
+      "submitReportButton"
+    );
+
+
+  button.disabled = true;
+
+  button.textContent =
+    "در حال ارسال...";
+
+
+  try {
+
+    const {
+      data: userData,
+      error: userError
+    } =
+      await db.auth.getUser();
+
+
+    if (
+      userError ||
+      !userData.user
+    ) {
+
+      alert(
+        "جلسه ورود شما منقضی شده است. دوباره وارد شوید."
+      );
+
+      return;
+    }
+
+
+    const user =
+      userData.user;
+
+
+    const {
+      data: profile
+    } =
+      await db
+        .from("visitors")
+        .select("*")
+        .eq(
+          "user_id",
+          user.id
+        )
+        .single();
+
+
+    if (!profile) {
+
+      alert(
+        "اطلاعات ویزیتور پیدا نشد."
+      );
+
+      return;
+    }
+
+
+    const salesRaw =
+      onlyDigits(
+        document
+          .getElementById(
+            "sales_rial"
+          )
+          .value
+      );
+
+
+    const invoiceRaw =
+      onlyDigits(
+        document
+          .getElementById(
+            "invoice_count"
+          )
+          .value
+      );
+
+
+    const tonnageValue =
+      document
+        .getElementById(
+          "tonnage"
+        )
+        .value;
+
+
+    const report = {
+
+      visitor_name:
+        profile.full_name,
+
+      route:
+        document
+          .getElementById(
+            "route"
+          )
+          .value
+          .trim(),
+
+      report_date:
+        document
+          .getElementById(
+            "report_date"
+          )
+          .value,
+
+      sales_rial:
+        Number(salesRaw || 0),
+
+      invoice_count:
+        Number(invoiceRaw || 0),
+
+      tonnage:
+        Number(tonnageValue || 0),
+
+      arrangement:
+        document
+          .getElementById(
+            "arrangement"
+          )
+          .value,
+
+      route_visits:
+        document
+          .getElementById(
+            "route_visits"
+          )
+          .value,
+
+      problems:
+        document
+          .getElementById(
+            "problems"
+          )
+          .value
+          .trim(),
+
+      visitor_id:
+        profile.id,
+
+      user_id:
+        user.id
+
+    };
+
+
+    if (!report.route) {
+
+      alert(
+        "لطفاً مسیر را وارد کنید."
+      );
+
+      return;
+    }
+
+
+    if (!report.report_date) {
+
+      alert(
+        "لطفاً تاریخ گزارش را انتخاب کنید."
+      );
+
+      return;
+    }
+
+
+    const {
+      error
+    } =
+      await db
+        .from("daily_reports")
+        .insert(report);
+
+
+    if (error) {
+
+      console.error(error);
+
+      alert(
+        "ارسال گزارش ناموفق بود:\n" +
+        error.message
+      );
+
+      return;
+    }
+
+
+    page(`
+
+      <div class="success-box">
+
+        ✅ گزارش با موفقیت ارسال شد
+
       </div>
 
-      <div class="stat">
-        فاکتور
-        <b id="totalInvoices">0</b>
+
+      <h2>
+        گزارش شما ثبت شد
+      </h2>
+
+
+      <p>
+        تاریخ:
+        <b>
+          ${jalaliDate(
+            report.report_date,
+            true
+          )}
+        </b>
+      </p>
+
+
+      <p>
+        فروش:
+        <b>
+          ${faMoney(
+            report.sales_rial
+          )}
+          ریال
+        </b>
+      </p>
+
+
+      <button
+        class="primary"
+        onclick="location.reload()"
+      >
+        ثبت گزارش جدید
+      </button>
+
+
+      <br><br>
+
+
+      <button
+        class="red"
+        onclick="logout()"
+      >
+        خروج
+      </button>
+
+    `);
+
+
+  } catch (e) {
+
+    console.error(e);
+
+    alert(
+      "خطای غیرمنتظره رخ داد."
+    );
+
+  } finally {
+
+    button.disabled = false;
+
+    button.textContent =
+      "ارسال گزارش";
+
+  }
+
+}
+
+
+// ======================================================
+// صفحه مدیریت
+// ======================================================
+
+async function showAdmin() {
+
+  page(`
+
+    <div class="topbar">
+
+      <div>
+
+        <h2>
+          داشبورد مدیریت
+        </h2>
+
+        <div>
+          گزارش روزانه ویزیتورهای شام شام
+        </div>
+
       </div>
 
-      <div class="stat">
-        تناژ
-        <b id="totalTonnage">0</b>
-      </div>
 
-      <div class="stat">
-        گزارش‌ها
-        <b id="reportCount">0</b>
+      <div class="topbar-buttons">
+
+        <button
+          class="blue"
+          onclick="loadAdminReports()"
+        >
+          نمایش گزارش‌ها
+        </button>
+
+
+        <button
+          class="red"
+          onclick="logout()"
+        >
+          خروج
+        </button>
+
       </div>
 
     </div>
 
-    <br>
 
-    <label>فیلتر ویزیتور</label>
+    <div id="adminContent">
 
-    <select id="visitorFilter">
-      <option value="">
-        همه ویزیتورها
-      </option>
-    </select>
+      <div class="empty">
 
-    <label>از تاریخ</label>
-    <input id="fromDate" type="date">
-
-    <label>تا تاریخ</label>
-    <input id="toDate" type="date">
-
-    <label>مسیر</label>
-    <input
-      id="routeFilter"
-      placeholder="مثلاً اهواز"
-    >
-
-    <button
-      class="primary"
-      onclick="loadAdminReports()"
-    >
-      🔎 نمایش گزارش‌ها
-    </button>
-
-    <br><br>
-
-    <button
-      class="green"
-      onclick="exportCSV()"
-    >
-      📊 خروجی Excel / CSV
-    </button>
-
-    <h3 style="margin-top:25px">
-      🏆 رتبه‌بندی ویزیتورها
-    </h3>
-
-    <div id="ranking"></div>
-
-    <h3 style="margin-top:25px">
-      📅 گزارش‌های روزانه
-    </h3>
-
-    <div id="reports"></div>
-
-  `);
-
-  await loadAdminReports();
-}
-
-
-async function loadAdminReports(){
-
-  const {data,error} =
-    await db
-      .from("daily_reports")
-      .select("*")
-      .order("report_date",{ascending:false});
-
-  if(error){
-
-    console.error(error);
-
-    alert("دریافت گزارش‌ها با خطا مواجه شد");
-
-    return;
-  }
-
-  window.allReports = data || [];
-
-  const names =
-    [...new Set(
-      window.allReports
-        .map(x=>x.visitor_name)
-        .filter(Boolean)
-    )];
-
-  const select =
-    document.getElementById("visitorFilter");
-
-  if(select){
-
-    select.innerHTML =
-      `<option value="">
-        همه ویزیتورها
-      </option>` +
-
-      names.map(n=>
-        `<option value="${n}">
-          ${n}
-        </option>`
-      ).join("");
-
-  }
-
-  renderAdmin();
-}
-
-
-function getFilteredReports(){
-
-  let reports =
-    [...(window.allReports || [])];
-
-  const visitor =
-    document.getElementById("visitorFilter")?.value;
-
-  const from =
-    document.getElementById("fromDate")?.value;
-
-  const to =
-    document.getElementById("toDate")?.value;
-
-  const route =
-    document.getElementById("routeFilter")?.value.trim();
-
-  if(visitor){
-
-    reports =
-      reports.filter(
-        x=>x.visitor_name === visitor
-      );
-
-  }
-
-  if(from){
-
-    reports =
-      reports.filter(
-        x=>x.report_date >= from
-      );
-
-  }
-
-  if(to){
-
-    reports =
-      reports.filter(
-        x=>x.report_date <= to
-      );
-
-  }
-
-  if(route){
-
-    reports =
-      reports.filter(
-        x=>
-          (x.route || "")
-          .includes(route)
-      );
-
-  }
-
-  return reports;
-}
-
-
-function renderAdmin(){
-
-  const reports =
-    getFilteredReports();
-
-  const sales =
-    reports.reduce(
-      (a,x)=>
-        a + Number(x.sales_rial || 0),
-      0
-    );
-
-  const invoices =
-    reports.reduce(
-      (a,x)=>
-        a + Number(x.invoice_count || 0),
-      0
-    );
-
-  const tonnage =
-    reports.reduce(
-      (a,x)=>
-        a + Number(x.tonnage || 0),
-      0
-    );
-
-  const visitors =
-    new Set(
-      reports
-        .map(x=>x.visitor_name)
-        .filter(Boolean)
-    ).size;
-
-  document.getElementById("totalSales")
-    .textContent =
-      fa(sales) + " ریال";
-
-  document.getElementById("totalInvoices")
-    .textContent =
-      fa(invoices);
-
-  document.getElementById("totalTonnage")
-    .textContent =
-      fa(tonnage);
-
-  document.getElementById("reportCount")
-    .textContent =
-      fa(reports.length) +
-      " / " +
-      fa(visitors);
-
-  renderRanking(reports);
-
-  renderReportsByDay(reports);
-}
-
-
-function renderRanking(reports){
-
-  const map = {};
-
-  reports.forEach(r=>{
-
-    const name =
-      r.visitor_name || "نامشخص";
-
-    if(!map[name]){
-
-      map[name] = {
-        sales:0,
-        invoices:0,
-        tonnage:0
-      };
-
-    }
-
-    map[name].sales +=
-      Number(r.sales_rial || 0);
-
-    map[name].invoices +=
-      Number(r.invoice_count || 0);
-
-    map[name].tonnage +=
-      Number(r.tonnage || 0);
-
-  });
-
-  const list =
-    Object.entries(map)
-      .sort(
-        (a,b)=>
-          b[1].sales - a[1].sales
-      );
-
-  document.getElementById("ranking").innerHTML =
-    list.length
-
-      ? list.map((x,i)=>`
-
-        <div class="rank">
-
-          <b>
-            ${fa(i+1)}. ${x[0]}
-          </b>
-
-          <br>
-
-          فروش:
-          ${fa(x[1].sales)}
-          ریال
-
-          |
-
-          فاکتور:
-          ${fa(x[1].invoices)}
-
-          |
-
-          تناژ:
-          ${fa(x[1].tonnage)}
-
-        </div>
-
-      `).join("")
-
-      : "هنوز گزارشی ثبت نشده است.";
-}
-
-
-function renderReportsByDay(reports){
-
-  const box =
-    document.getElementById("reports");
-
-  if(!reports.length){
-
-    box.innerHTML =
-      "<p>گزارشی پیدا نشد.</p>";
-
-    return;
-  }
-
-  const groups = {};
-
-  reports.forEach(r=>{
-
-    const date =
-      r.report_date || "بدون تاریخ";
-
-    if(!groups[date])
-      groups[date] = [];
-
-    groups[date].push(r);
-
-  });
-
-  const dates =
-    Object.keys(groups)
-      .sort((a,b)=>
-        b.localeCompare(a)
-      );
-
-  box.innerHTML =
-    dates.map((date,index)=>{
-
-      const dayReports =
-        groups[date];
-
-      const totalSales =
-        dayReports.reduce(
-          (a,x)=>
-            a + Number(x.sales_rial || 0),
-          0
-        );
-
-      const totalInvoices =
-        dayReports.reduce(
-          (a,x)=>
-            a + Number(x.invoice_count || 0),
-          0
-        );
-
-      return `
-
-        <div class="day-box">
-
-          <div
-            class="day-title"
-            onclick="toggleDay(${index})"
-          >
-
-            <div>
-
-              📅
-              ${jalaliDate(date,true)}
-
-              <div class="day-summary">
-
-                ${fa(dayReports.length)}
-                گزارش
-
-                • فروش:
-                ${fa(totalSales)}
-                ریال
-
-                • فاکتور:
-                ${fa(totalInvoices)}
-
-              </div>
-
-            </div>
-
-            <span
-              class="arrow"
-              id="arrow-${index}"
-            >
-              ${index === 0 ? "▲" : "▼"}
-            </span>
-
-          </div>
-
-          <div
-            class="day-content"
-            id="day-${index}"
-            style="
-              display:${index === 0 ? "block" : "none"};
-            "
-          >
-
-            ${dayReports.map(r=>`
-
-              <div class="report">
-
-                <h3>
-                  👤
-                  ${r.visitor_name || "بدون نام"}
-                </h3>
-
-                <div class="row">
-                  <span>تاریخ</span>
-                  <b>
-                    ${jalaliDate(r.report_date)}
-                  </b>
-                </div>
-
-                <div class="row">
-                  <span>مسیر</span>
-                  <b>${r.route || "-"}</b>
-                </div>
-
-                <div class="row">
-                  <span>فروش</span>
-                  <b>
-                    ${fa(r.sales_rial)}
-                    ریال
-                  </b>
-                </div>
-
-                <div class="row">
-                  <span>فاکتور</span>
-                  <b>
-                    ${fa(r.invoice_count)}
-                  </b>
-                </div>
-
-                <div class="row">
-                  <span>تناژ</span>
-                  <b>
-                    ${fa(r.tonnage)}
-                  </b>
-                </div>
-
-                <div class="row">
-                  <span>چیدمان</span>
-                  <b>
-                    ${r.arrangement || "-"}
-                  </b>
-                </div>
-
-                <div class="row">
-                  <span>سرکشی</span>
-                  <b>
-                    ${r.route_visits || "-"}
-                  </b>
-                </div>
-
-                <div class="row">
-                  <span>مشکلات</span>
-                  <b>
-                    ${r.problems || "موردی ثبت نشده"}
-                  </b>
-                </div>
-
-              </div>
-
-            `).join("")}
-
-          </div>
-
-        </div>
-
-      `;
-
-    }).join("");
-}
-
-
-function toggleDay(index){
-
-  const content =
-    document.getElementById(
-      `day-${index}`
-    );
-
-  const arrow =
-    document.getElementById(
-      `arrow-${index}`
-    );
-
-  if(content.style.display === "none"){
-
-    content.style.display = "block";
-
-    arrow.textContent = "▲";
-
-  }else{
-
-    content.style.display = "none";
-
-    arrow.textContent = "▼";
-
-  }
-}
-
-
-function exportCSV(){
-
-  const reports =
-    getFilteredReports();
-
-  if(!reports.length){
-
-    alert("گزارشی برای خروجی وجود ندارد");
-
-    return;
-  }
-
-  const header =
-    "ویزیتور,مسیر,تاریخ شمسی,تاریخ میلادی,فروش ریال,تعداد فاکتور,تناژ,چیدمان,سرکشی,مشکلات\n";
-
-  const rows =
-    reports.map(r=>
-
-      [
-
-        r.visitor_name,
-
-        r.route,
-
-        jalaliDate(r.report_date),
-
-        r.report_date,
-
-        r.sales_rial,
-
-        r.invoice_count,
-
-        r.tonnage,
-
-        r.arrangement,
-
-        r.route_visits,
-
-        r.problems
-
-      ]
-
-      .map(v=>
-        `"${String(v || "")
-          .replace(/"/g,'""')}"`
-      )
-
-      .join(",")
-
-    ).join("\n");
-
-  const blob =
-    new Blob(
-      ["\ufeff" + header + rows],
-      {
-        type:
-          "text/csv;charset=utf-8;"
-      }
-    );
-
-  const url =
-    URL.createObjectURL(blob);
-
-  const a =
-    document.createElement("a");
-
-  a.href = url;
-
-  a.download =
-    "گزارش_ویزیتورها.csv";
-
-  a.click();
-
-  URL.revokeObjectURL(url);
-}
-
-
-async function logout(){
-
-  await db.auth.signOut();
-
-  location.reload();
-
-}
+       
